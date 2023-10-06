@@ -72,6 +72,10 @@ tasks {
         delete("src/main/generated")
     }
 
+    build {
+        dependsOn(clean)
+    }
+
     test {
         useJUnitPlatform()
     }

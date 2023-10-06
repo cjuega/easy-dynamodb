@@ -2,9 +2,9 @@ package com.cjuega.easydynamodb
 
 import com.cjuega.easydynamodb.config.DynamoDbConfig
 import com.cjuega.easydynamodb.expressions.DynamoDbExpressionsBuilder
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model.*
@@ -161,7 +161,11 @@ class DynamoDbClientWrapper(
                 prev = response.items()[0]
             }
 
-            action(response.items(), extractKeys(prev, indexName), if (areMoreItems) extractKeys(response.lastEvaluatedKey(), indexName) else null)
+            action(
+                response.items(),
+                extractKeys(prev, indexName),
+                if (areMoreItems) extractKeys(response.lastEvaluatedKey(), indexName) else null
+            )
 
             if (areMoreItems) {
                 builder.exclusiveStartKey(response.lastEvaluatedKey())
@@ -188,6 +192,7 @@ class DynamoDbClientWrapper(
         } else
             config.extractAllKeys(item)
     }
+
     suspend fun scan(
         action: (List<Map<String, AttributeValue>>, Map<String, AttributeValue>?) -> Unit,
         indexName: String? = null,
@@ -269,7 +274,11 @@ class DynamoDbClientWrapper(
 
             areMoreItems = response.hasLastEvaluatedKey() && response.lastEvaluatedKey().isNotEmpty()
 
-            action(response.items(), segment, if (areMoreItems) extractKeys(response.lastEvaluatedKey(), indexName) else null)
+            action(
+                response.items(),
+                segment,
+                if (areMoreItems) extractKeys(response.lastEvaluatedKey(), indexName) else null
+            )
 
             if (areMoreItems) {
                 builder.exclusiveStartKey(response.lastEvaluatedKey())

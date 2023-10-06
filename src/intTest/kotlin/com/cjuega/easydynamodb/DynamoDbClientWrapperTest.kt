@@ -77,8 +77,7 @@ class DynamoDbClientWrapperTest {
             val items = randomItems(10)
 
             // When
-            val writeRequests = items.map {
-                    item ->
+            val writeRequests = items.map { item ->
                 WriteRequest.builder().deleteRequest { it.key(config.extractPrimaryKey(item)) }.build()
             }
             testee.batchWrite(writeRequests)
@@ -161,9 +160,10 @@ class DynamoDbClientWrapperTest {
             // When
             val actual = mutableListOf<Map<String, AttributeValue>>()
             val keyExpression = "PK = \"PK#1\" and begins_with(SK, \"SK#\")"
-            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit = { list, _, _ ->
-                actual.addAll(list)
-            }
+            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit =
+                { list, _, _ ->
+                    actual.addAll(list)
+                }
             testee.query(keyExpression = keyExpression, action = action)
 
             // Then
@@ -175,9 +175,10 @@ class DynamoDbClientWrapperTest {
             // When
             val actual = mutableListOf<Map<String, AttributeValue>>()
             val keyExpression = "GSI1PK = \"SK#1\" and begins_with(GSI1SK, \"PK#\")"
-            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit = { list, _, _ ->
-                actual.addAll(list)
-            }
+            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit =
+                { list, _, _ ->
+                    actual.addAll(list)
+                }
             testee.query(indexName = "GSI1", keyExpression = keyExpression, action = action)
 
             // Then
@@ -196,9 +197,10 @@ class DynamoDbClientWrapperTest {
             // When
             val actual = mutableListOf<Map<String, AttributeValue>>()
             val keyExpression = "PK = \"$partitionKey\" and begins_with(SK, \"SK#\")"
-            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit = { list, _, _ ->
-                actual.addAll(list)
-            }
+            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit =
+                { list, _, _ ->
+                    actual.addAll(list)
+                }
             testee.query(keyExpression = keyExpression, action = action)
 
             // Then
@@ -206,51 +208,55 @@ class DynamoDbClientWrapperTest {
         }
 
         @Test
-        fun `should return items in the item collection filtered by key expression and where clause`(): Unit = runBlocking {
-            // Given
-            val partitionKey = "PK#${ObjectMother.int()}"
-            val items = randomItemCollection(partitionKey, 100)
-            val expected = items
-                .sortedBy { it["SK"]!!.s() }
-                .filter { it["SK"]!!.s()!! >= "SK#1" && it["SK"]!!.s()!! <= "SK#50" }
-                .filter { it["IsValid"]!!.bool() == true }
-                .toList()
-            val writeRequests = items.map { item -> WriteRequest.builder().putRequest { it.item(item) }.build() }
-            testee.batchWrite(writeRequests)
+        fun `should return items in the item collection filtered by key expression and where clause`(): Unit =
+            runBlocking {
+                // Given
+                val partitionKey = "PK#${ObjectMother.int()}"
+                val items = randomItemCollection(partitionKey, 100)
+                val expected = items
+                    .sortedBy { it["SK"]!!.s() }
+                    .filter { it["SK"]!!.s()!! >= "SK#1" && it["SK"]!!.s()!! <= "SK#50" }
+                    .filter { it["IsValid"]!!.bool() == true }
+                    .toList()
+                val writeRequests = items.map { item -> WriteRequest.builder().putRequest { it.item(item) }.build() }
+                testee.batchWrite(writeRequests)
 
-            // When
-            val actual = mutableListOf<Map<String, AttributeValue>>()
-            val keyExpression = "PK = \"$partitionKey\" and SK between \"SK#1\" and \"SK#50\""
-            val where = "IsValid = true"
-            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit = { list, _, _ ->
-                actual.addAll(list)
+                // When
+                val actual = mutableListOf<Map<String, AttributeValue>>()
+                val keyExpression = "PK = \"$partitionKey\" and SK between \"SK#1\" and \"SK#50\""
+                val where = "IsValid = true"
+                val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit =
+                    { list, _, _ ->
+                        actual.addAll(list)
+                    }
+                testee.query(keyExpression = keyExpression, action = action, where = where)
+
+                // Then
+                assertThat(actual).isEqualTo(expected)
             }
-            testee.query(keyExpression = keyExpression, action = action, where = where)
-
-            // Then
-            assertThat(actual).isEqualTo(expected)
-        }
 
         @Test
-        fun `should return all items in the item collection in reverse order when scanning backwards`(): Unit = runBlocking {
-            // Given
-            val partitionKey = "PK#${ObjectMother.int()}"
-            val items = randomItemCollection(partitionKey, 100)
-            val expected = items.sortedBy { it["SK"]!!.s() }.reversed().toList()
-            val writeRequests = items.map { item -> WriteRequest.builder().putRequest { it.item(item) }.build() }
-            testee.batchWrite(writeRequests)
+        fun `should return all items in the item collection in reverse order when scanning backwards`(): Unit =
+            runBlocking {
+                // Given
+                val partitionKey = "PK#${ObjectMother.int()}"
+                val items = randomItemCollection(partitionKey, 100)
+                val expected = items.sortedBy { it["SK"]!!.s() }.reversed().toList()
+                val writeRequests = items.map { item -> WriteRequest.builder().putRequest { it.item(item) }.build() }
+                testee.batchWrite(writeRequests)
 
-            // When
-            val actual = mutableListOf<Map<String, AttributeValue>>()
-            val keyExpression = "PK = \"$partitionKey\" and begins_with(SK, \"SK#\")"
-            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit = { list, _, _ ->
-                actual.addAll(list)
+                // When
+                val actual = mutableListOf<Map<String, AttributeValue>>()
+                val keyExpression = "PK = \"$partitionKey\" and begins_with(SK, \"SK#\")"
+                val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit =
+                    { list, _, _ ->
+                        actual.addAll(list)
+                    }
+                testee.query(keyExpression = keyExpression, action = action, scanForward = false)
+
+                // Then
+                assertThat(actual).isEqualTo(expected)
             }
-            testee.query(keyExpression = keyExpression, action = action, scanForward = false)
-
-            // Then
-            assertThat(actual).isEqualTo(expected)
-        }
 
         @Test
         fun `should paginate results`(): Unit = runBlocking {
@@ -266,10 +272,11 @@ class DynamoDbClientWrapperTest {
             val actual = mutableListOf<Map<String, AttributeValue>>()
             val keyExpression = "PK = \"$partitionKey\" and begins_with(SK, \"SK#\")"
             var cursor: Map<String, AttributeValue>? = null
-            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit = { list, _, next ->
-                actual.addAll(list)
-                cursor = next!!
-            }
+            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit =
+                { list, _, next ->
+                    actual.addAll(list)
+                    cursor = next!!
+                }
             testee.query(keyExpression = keyExpression, action = action, limit = limit)
             testee.query(keyExpression = keyExpression, action = action, limit = limit, start = cursor)
             testee.query(keyExpression = keyExpression, action = action, limit = limit, start = cursor)
@@ -292,13 +299,26 @@ class DynamoDbClientWrapperTest {
             val actual = mutableListOf<Map<String, AttributeValue>>()
             val keyExpression = "PK = \"$partitionKey\" and begins_with(SK, \"SK#\")"
             var cursor: Map<String, AttributeValue>? = null
-            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit = { list, _, next ->
-                actual.addAll(list)
-                cursor = next!!
-            }
+            val action: (List<Map<String, AttributeValue>>, prev: Map<String, AttributeValue>?, next: Map<String, AttributeValue>?) -> Unit =
+                { list, _, next ->
+                    actual.addAll(list)
+                    cursor = next!!
+                }
             testee.query(keyExpression = keyExpression, action = action, scanForward = false, limit = limit)
-            testee.query(keyExpression = keyExpression, action = action, scanForward = false, start = cursor, limit = limit)
-            testee.query(keyExpression = keyExpression, action = action, scanForward = false, start = cursor, limit = limit)
+            testee.query(
+                keyExpression = keyExpression,
+                action = action,
+                scanForward = false,
+                start = cursor,
+                limit = limit
+            )
+            testee.query(
+                keyExpression = keyExpression,
+                action = action,
+                scanForward = false,
+                start = cursor,
+                limit = limit
+            )
 
             // Then
             assertThat(actual).isEqualTo(expected)
@@ -604,7 +624,12 @@ class DynamoDbClientWrapperTest {
             val action: (List<Map<String, AttributeValue>>, Int, Map<String, AttributeValue>?) -> Unit = { list, _, _ ->
                 actual.addAll(list)
             }
-            testee.parallelScan(indexName = "GSI1", totalSegments = totalSegments, action = action, where = "IsValid <> false")
+            testee.parallelScan(
+                indexName = "GSI1",
+                totalSegments = totalSegments,
+                action = action,
+                where = "IsValid <> false"
+            )
 
             // Then
             assertThat(actual).hasSameElementsAs(expected)
@@ -623,13 +648,19 @@ class DynamoDbClientWrapperTest {
             // When
             val actual = mutableListOf<Map<String, AttributeValue>>()
             val cursors = MutableList<Map<String, AttributeValue>?>(totalSegments) { null }
-            val action: (List<Map<String, AttributeValue>>, Int, Map<String, AttributeValue>?) -> Unit = { list, index, n ->
-                actual.addAll(list)
-                cursors[index] = n
-            }
+            val action: (List<Map<String, AttributeValue>>, Int, Map<String, AttributeValue>?) -> Unit =
+                { list, index, n ->
+                    actual.addAll(list)
+                    cursors[index] = n
+                }
             testee.parallelScan(totalSegments = totalSegments, action = action, limit = limit)
-            while(cursors.any { it != null }) {
-                testee.parallelScan(totalSegments = totalSegments, action = action, limit = limit, start = cursors.toList())
+            while (cursors.any { it != null }) {
+                testee.parallelScan(
+                    totalSegments = totalSegments,
+                    action = action,
+                    limit = limit,
+                    start = cursors.toList()
+                )
             }
 
             // Then
@@ -649,13 +680,20 @@ class DynamoDbClientWrapperTest {
             // When
             val actual = mutableListOf<Map<String, AttributeValue>>()
             val cursors = MutableList<Map<String, AttributeValue>?>(totalSegments) { null }
-            val action: (List<Map<String, AttributeValue>>, Int, Map<String, AttributeValue>?) -> Unit = { list, index, n ->
-                actual.addAll(list)
-                cursors[index] = n
-            }
+            val action: (List<Map<String, AttributeValue>>, Int, Map<String, AttributeValue>?) -> Unit =
+                { list, index, n ->
+                    actual.addAll(list)
+                    cursors[index] = n
+                }
             testee.parallelScan(indexName = "GSI1", totalSegments = totalSegments, action = action, limit = limit)
-            while(cursors.any { it != null }) {
-                testee.parallelScan(indexName = "GSI1", totalSegments = totalSegments, action = action, limit = limit, start = cursors.toList())
+            while (cursors.any { it != null }) {
+                testee.parallelScan(
+                    indexName = "GSI1",
+                    totalSegments = totalSegments,
+                    action = action,
+                    limit = limit,
+                    start = cursors.toList()
+                )
             }
 
             // Then

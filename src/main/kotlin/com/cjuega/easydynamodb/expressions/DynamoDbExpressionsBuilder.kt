@@ -22,12 +22,23 @@ object DynamoDbExpressionsBuilder {
         val tokens = CommonTokenStream(lexer)
         val parser = DynamoDbExpressionParser(tokens)
         val tree = parser.condition()
-        val visitor = DynamoDbCustomExpressionVisitor(previous?.attributeNames, previous?.attributeValues, previous?.index)
+        val visitor =
+            DynamoDbCustomExpressionVisitor(previous?.attributeNames, previous?.attributeValues, previous?.index)
 
         val mutatedExpression = visitor.visit(tree)
 
-        return DynamoDbExpression(mutatedExpression, visitor.attributeNames(), visitor.attributeValues(), visitor.index())
+        return DynamoDbExpression(
+            mutatedExpression,
+            visitor.attributeNames(),
+            visitor.attributeValues(),
+            visitor.index()
+        )
     }
 
-    data class DynamoDbExpression(val expression: String, val attributeNames: Map<String, String>, val attributeValues: Map<String, AttributeValue>, val index: Int)
+    data class DynamoDbExpression(
+        val expression: String,
+        val attributeNames: Map<String, String>,
+        val attributeValues: Map<String, AttributeValue>,
+        val index: Int
+    )
 }
