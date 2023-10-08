@@ -28,6 +28,35 @@ class DynamoDbClientWrapperTest {
     }
 
     @Nested
+    @DisplayName("getItem")
+    inner class GetItemTest {
+        @Test
+        fun `should return null when the item didn´t exist`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+
+            // When
+            val actual = testee.getItem(item)
+
+            // Then
+            assertThat(actual).isNull()
+        }
+
+        @Test
+        fun `should return an existing item`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+            testee.putItem(item)
+
+            // When
+            val actual = testee.getItem(item)
+
+            // Then
+            assertThat(actual).isEqualTo(item)
+        }
+    }
+
+    @Nested
     @DisplayName("putItem")
     inner class PutItemTest {
         @Test

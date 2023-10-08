@@ -27,6 +27,19 @@ class DynamoDbClientWrapper(
         }
     }
 
+    fun getItem(key: Map<String, AttributeValue>): Map<String, AttributeValue>? {
+        val response = client.getItem {
+            it.tableName(config.tableName())
+            it.key(config.extractPrimaryKey(key))
+        }
+
+        if (!response.hasItem() || response.item().isEmpty()) {
+            return null
+        }
+
+        return response.item()
+    }
+
     fun putItem(item: Map<String, AttributeValue>, condition: String? = null) {
         client.putItem {
             it.tableName(config.tableName())
