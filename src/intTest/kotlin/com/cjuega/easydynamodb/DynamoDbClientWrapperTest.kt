@@ -3,12 +3,10 @@ package com.cjuega.easydynamodb
 import com.cjuega.easydynamodb.config.DynamoDbConfig
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException
 import software.amazon.awssdk.services.dynamodb.model.WriteRequest
 
 class DynamoDbClientWrapperTest {
@@ -30,8 +28,65 @@ class DynamoDbClientWrapperTest {
     }
 
     @Nested
+    @DisplayName("putItem")
+    inner class PutItemTest {
+        @Test
+        fun `should persist an item in the table when the item didn´t exist`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+
+            // When
+            testee.putItem(item)
+
+            // Then
+            val actual = scan()
+            assertThat(actual).containsExactly(item)
+        }
+
+        @Test
+        fun `should overwrite an item in the table when it already existed`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+            testee.putItem(item)
+
+            val overwrite = item.toMutableMap()
+            overwrite["Value"] = AttributeValue.builder().n("${ObjectMother.int()}").build()
+
+            // When
+            testee.putItem(overwrite.toMap())
+
+            // Then
+            val actual = scan()
+            assertThat(actual).containsExactly(overwrite)
+        }
+
+        @Test
+        fun `should persist an item when the condition is satisfied`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+
+            // When
+            testee.putItem(item, "attribute_not_exists(Version) or Type = \"Random\"")
+
+            // Then
+            val actual = scan()
+            assertThat(actual).containsExactly(item)
+        }
+
+        @Test
+        fun `should throw a ConditionalCheckFailedException exception when the condition is not met`(): Unit =
+            runBlocking {
+                val item = randomItems(1)[0]
+
+                assertThrows<ConditionalCheckFailedException> {
+                    testee.putItem(item, "attribute_exists(SK)")
+                }
+            }
+    }
+
+    @Nested
     @DisplayName("batchWrite")
-    inner class BatchWriteITest {
+    inner class BatchWriteTest {
         @Test
         fun `should write multiple items in batch`(): Unit = runBlocking {
             // Given
@@ -89,7 +144,7 @@ class DynamoDbClientWrapperTest {
 
     @Nested
     @DisplayName("batchGet")
-    inner class BatchGetITest {
+    inner class BatchGetTest {
         @Test
         fun `should return nothing when items do not exist`(): Unit = runBlocking {
             // Given
@@ -140,7 +195,7 @@ class DynamoDbClientWrapperTest {
 
     @Nested
     @DisplayName("query")
-    inner class QueryITest {
+    inner class QueryTest {
         private fun randomItemCollection(partitionKey: String, size: Int? = 100): List<Map<String, AttributeValue>> {
             return (1..size!!).map { i ->
                 mapOf(
@@ -327,7 +382,7 @@ class DynamoDbClientWrapperTest {
 
     @Nested
     @DisplayName("scan")
-    inner class ScanITest {
+    inner class ScanTest {
         @Test
         fun `should return nothing when table is empty`(): Unit = runBlocking {
             // When
@@ -519,7 +574,7 @@ class DynamoDbClientWrapperTest {
 
     @Nested
     @DisplayName("parallelScan")
-    inner class ParallelScanITest {
+    inner class ParallelScanTest {
         @Test
         fun `should return nothing when table is empty`(): Unit = runBlocking {
             // Given

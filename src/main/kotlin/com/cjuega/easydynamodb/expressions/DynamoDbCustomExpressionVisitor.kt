@@ -12,9 +12,10 @@ class DynamoDbCustomExpressionVisitor(
     private val attributeValues = attributeValues?.toMutableMap() ?: mutableMapOf()
     private var index = index ?: 1
 
-    fun attributeNames(): Map<String, String> = attributeNames.toMap()
+    fun attributeNames(): Map<String, String>? = if (attributeNames.isNotEmpty()) attributeNames.toMap() else null
 
-    fun attributeValues(): Map<String, AttributeValue> = attributeValues.toMap()
+    fun attributeValues(): Map<String, AttributeValue>? =
+        if (attributeValues.isNotEmpty()) attributeValues.toMap() else null
 
     fun index(): Int = index
 

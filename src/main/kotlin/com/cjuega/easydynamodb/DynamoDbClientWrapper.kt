@@ -27,6 +27,19 @@ class DynamoDbClientWrapper(
         }
     }
 
+    fun putItem(item: Map<String, AttributeValue>, condition: String? = null) {
+        client.putItem {
+            it.tableName(config.tableName())
+            it.item(item)
+
+            DynamoDbExpressionsBuilder.parseConditionExpression(condition)?.let { exp ->
+                it.conditionExpression(exp.expression)
+                it.expressionAttributeNames(exp.attributeNames)
+                it.expressionAttributeValues(exp.attributeValues)
+            }
+        }
+    }
+
     suspend fun batchWrite(items: List<WriteRequest>) {
         val batches = items.chunked(BATCH_WRITE_SIZE_LIMIT)
 

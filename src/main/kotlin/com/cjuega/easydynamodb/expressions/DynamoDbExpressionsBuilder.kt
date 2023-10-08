@@ -35,10 +35,14 @@ object DynamoDbExpressionsBuilder {
         )
     }
 
+    fun parseConditionExpression(expression: String?, previous: DynamoDbExpression? = null): DynamoDbExpression? {
+        return parseFilterExpression(expression, previous)
+    }
+
     data class DynamoDbExpression(
         val expression: String,
-        val attributeNames: Map<String, String>,
-        val attributeValues: Map<String, AttributeValue>,
+        val attributeNames: Map<String, String>?,
+        val attributeValues: Map<String, AttributeValue>?,
         val index: Int
     )
 }
