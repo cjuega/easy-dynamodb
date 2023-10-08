@@ -36,7 +36,7 @@ class DynamoDbClientWrapperTest {
             val item = randomItems(1)[0]
 
             // When
-            val actual = testee.getItem(item)
+            val actual = testee.getItem(config.extractPrimaryKey(item))
 
             // Then
             assertThat(actual).isNull()
@@ -49,7 +49,7 @@ class DynamoDbClientWrapperTest {
             testee.putItem(item)
 
             // When
-            val actual = testee.getItem(item)
+            val actual = testee.getItem(config.extractPrimaryKey(item))
 
             // Then
             assertThat(actual).isEqualTo(item)
@@ -110,6 +110,64 @@ class DynamoDbClientWrapperTest {
                 assertThrows<ConditionalCheckFailedException> {
                     testee.putItem(item, "attribute_exists(SK)")
                 }
+
+                val actual = testee.getItem(config.extractPrimaryKey(item))
+                assertThat(actual).isNull()
+            }
+    }
+
+    @Nested
+    @DisplayName("deleteItem")
+    inner class DeleteItemTest {
+        @Test
+        fun `should do nothing when the item didn´t exist`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+
+            // When
+            testee.deleteItem(config.extractPrimaryKey(item))
+        }
+
+        @Test
+        fun `should remove an existing item in the table`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+            testee.putItem(item)
+
+            // When
+            testee.deleteItem(config.extractPrimaryKey(item))
+
+            // Then
+            val actual = scan()
+            assertThat(actual).isEmpty()
+        }
+
+        @Test
+        fun `should delete an item when the condition is satisfied`(): Unit = runBlocking {
+            // Given
+            val item = randomItems(1)[0]
+            testee.putItem(item)
+
+            // When
+            testee.deleteItem(config.extractPrimaryKey(item), "attribute_not_exists(Version)")
+
+            // Then
+            val actual = scan()
+            assertThat(actual).isEmpty()
+        }
+
+        @Test
+        fun `should throw a ConditionalCheckFailedException exception when the condition is not met`(): Unit =
+            runBlocking {
+                val item = randomItems(1)[0]
+                testee.putItem(item)
+
+                assertThrows<ConditionalCheckFailedException> {
+                    testee.deleteItem(config.extractPrimaryKey(item), "attribute_exists(SK) and Version = 1")
+                }
+
+                val actual = testee.getItem(config.extractPrimaryKey(item))
+                assertThat(actual).isEqualTo(item)
             }
     }
 
